@@ -1,0 +1,10 @@
+target/
+test-output/
+screenshots/*.png
+reports/*.html
+reports/*.json
+reports/failed_scenarios.txt
+logs/*.log
+*.class
+.idea/
+*.iml

@@ -1,0 +1,46 @@
+
+
+I have worked on a hybrid automation framework using Selenium with Java,
+Cucumber for BDD, and TestNG and Appium and jenkins.
+
+----we have a config folder with separate properties files for QA, staging, and production,
+ each file holding the app URL, environment name, username, Password and browser.
+  A ConfigReader class reads the right file based on a system property passed at runtime.
+
+-----We have base Driver package contains DriverFactory, which handles driver creation based
+    on the browser parameters and DriverManager, which holds the actual driver instance using a ThreadLocal.
+    provides getter nad setter methods - the driver be shared safly between hook and step definations.
+    Hooks sets the driver into DriverManager before a scenario starts,
+    and my step definitions pull it back out from the same place.
+    Using ThreadLocal specifically also means parallel scenario execution is safe.
+
+----we follow Page Object Model. Each pages is its own class with three parts:
+    locators declared with @FindBy, a constructor that takes the driver and
+    calls PageFactory.initElements() to wire those locators up lazily,
+    and action methods.
+
+----We have Listeners package - we build two things @1- RetryAnalyzer implementing TestNG's IRetryAnalyzer-
+    it retries a failed scenario immediately, in the same run, Given retry count.
+    overrides the retry() method, which accepts an ITestResult object as a parameter.
+    RetryTransformer implements IAnnotationTransformer and overrides its transform() method,
+   which accepts an ITestAnnotation object — inside it, we call annotation.setRetryAnalyzer(RetryAnalyzer.class),
+   which applies the retry logic to every test method automatically,
+   Second, if a scenario is still failing after those retries, I capture evidence of it.
+   In my Hooks class's @After method, I check scenario.isFailed()
+   — if true, I use Cucumber's scenario.attach() to embed a screenshot directly into the report,
+   and separately save a copy to disk too.
+
+---For reporting itself, I used the Extent Reports Cucumber adapter,
+   which hooks directly into Cucumber's plugin system and generates a report automatically.
+   And separately from the in-run retry, Cucumber's own rerun plugin writes any scenario that's
+   still failing to a file after the run finishes.
+   I have a second runner, RerunFailedTests, that reads just that file and re-executes only those scenarios —
+   typically run as its own stage in CI/CD, so a genuinely broken scenario gets one final,
+    clean confirmation before it's reported as a real bug."
+
+--- pom.xml has all my dependencies
+ and configures the Surefire plugin two ways: it points Maven at testng.xml to actually drive execution,
+ testng.xml itself just points to my TestRunner class and registers the retry listener,
+ and also sets parallel execution at the suite level.
+ And I have a Jenkinsfile that wraps all of this into a CI/CD pipeline,
+ with environment and browser as pipeline parameters.
